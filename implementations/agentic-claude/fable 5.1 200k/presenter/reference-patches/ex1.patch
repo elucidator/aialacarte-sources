@@ -1,0 +1,122 @@
+diff -ruN a/src/main/kotlin/dev/conferenceplanner/session/PostgresSessionRepository.kt b/src/main/kotlin/dev/conferenceplanner/session/PostgresSessionRepository.kt
+--- a/src/main/kotlin/dev/conferenceplanner/session/PostgresSessionRepository.kt	2026-09-29 14:14:53.922340551 +0200
++++ b/src/main/kotlin/dev/conferenceplanner/session/PostgresSessionRepository.kt	2026-09-29 14:56:02.284584714 +0200
+@@ -17,18 +17,26 @@
+ @Repository
+ class PostgresSessionRepository(private val jdbc: JdbcClient) {
+ 
+-    /** Stable order: sort_order, then id. Availability is derived from ACTIVE bookings. */
+-    fun list(page: Int, size: Int): PageResponse<SessionSummary> {
+-        val total = jdbc.sql("SELECT count(*) FROM sessions").query(Long::class.javaObjectType).single()
++    /**
++     * Stable order: sort_order, then id. Availability is derived from ACTIVE bookings. With
++     * availableOnly the filter is applied before counting and paging, so totalElements and the
++     * pages describe the filtered set.
++     */
++    fun list(page: Int, size: Int, availableOnly: Boolean = false): PageResponse<SessionSummary> {
++        val total = jdbc.sql("$COUNTED SELECT count(*) FROM counted WHERE (:availableOnly = FALSE OR active_bookings < capacity)")
++            .param("availableOnly", availableOnly)
++            .query(Long::class.javaObjectType).single()
+         val items = jdbc.sql(
+             """
+-            SELECT s.id, s.title, s.room, s.capacity,
+-                   (SELECT count(*) FROM bookings b WHERE b.session_id = s.id AND b.status = 'ACTIVE') AS active_bookings
+-            FROM sessions s
+-            ORDER BY s.sort_order, s.id
++            $COUNTED
++            SELECT id, title, room, capacity, active_bookings
++            FROM counted
++            WHERE (:availableOnly = FALSE OR active_bookings < capacity)
++            ORDER BY sort_order, id
+             LIMIT :limit OFFSET :offset
+             """,
+         )
++            .param("availableOnly", availableOnly)
+             .param("limit", size)
+             .param("offset", page.toLong() * size)
+             .query { rs, _ ->
+@@ -39,4 +47,14 @@
+             .list()
+         return PageResponse(items, page, size, total)
+     }
++
++    private companion object {
++        const val COUNTED = """
++            WITH counted AS (
++                SELECT s.id, s.title, s.room, s.capacity, s.sort_order,
++                       (SELECT count(*) FROM bookings b WHERE b.session_id = s.id AND b.status = 'ACTIVE')::int AS active_bookings
++                FROM sessions s
++            )
++        """
++    }
+ }
+diff -ruN a/src/main/kotlin/dev/conferenceplanner/session/SessionController.kt b/src/main/kotlin/dev/conferenceplanner/session/SessionController.kt
+--- a/src/main/kotlin/dev/conferenceplanner/session/SessionController.kt	2026-09-29 14:14:53.929588881 +0200
++++ b/src/main/kotlin/dev/conferenceplanner/session/SessionController.kt	2026-09-29 14:56:02.273419311 +0200
+@@ -13,10 +13,12 @@
+     fun list(
+         @RequestParam(required = false) page: String?,
+         @RequestParam(required = false) size: String?,
++        @RequestParam(required = false) availableOnly: String?,
+     ): PageResponse<SessionSummary> {
+         val pageNumber = parseInt("page", page ?: "0", min = 0, max = Int.MAX_VALUE)
+         val pageSize = parseInt("size", size ?: "20", min = 1, max = 100)
+-        return sessions.list(pageNumber, pageSize)
++        val onlyAvailable = parseBoolean("availableOnly", availableOnly ?: "false")
++        return sessions.list(pageNumber, pageSize, onlyAvailable)
+     }
+ 
+     private fun parseInt(name: String, raw: String, min: Int, max: Int): Int {
+@@ -24,4 +26,10 @@
+         if (value < min || value > max) throw ApiException(ErrorCode.VALIDATION_ERROR, "$name must be between $min and $max")
+         return value
+     }
++
++    private fun parseBoolean(name: String, raw: String): Boolean = when (raw) {
++        "true" -> true
++        "false" -> false
++        else -> throw ApiException(ErrorCode.VALIDATION_ERROR, "$name must be true or false")
++    }
+ }
+diff -ruN a/src/main/resources/static/app.js b/src/main/resources/static/app.js
+--- a/src/main/resources/static/app.js	2026-09-29 14:17:02.626642876 +0200
++++ b/src/main/resources/static/app.js	2026-09-29 14:56:02.356965651 +0200
+@@ -4,6 +4,8 @@
+ const statusBox = document.getElementById('status');
+ const sessionsBody = document.querySelector('#sessions tbody');
+ const bookingsBody = document.querySelector('#bookings tbody');
++const availableOnly = document.getElementById('available-only');
++availableOnly.addEventListener('change', () => refresh());
+ 
+ identitySelect.value = localStorage.getItem('demoIdentity') || 'alice';
+ identitySelect.addEventListener('change', () => {
+@@ -37,7 +39,7 @@
+ }
+ 
+ async function loadSessions() {
+-  const page = await api('GET', '/api/sessions?page=0&size=20');
++  const page = await api('GET', `/api/sessions?page=0&size=20&availableOnly=${availableOnly.checked}`);
+   sessionsBody.replaceChildren();
+   for (const s of page.items) {
+     const tr = document.createElement('tr');
+diff -ruN a/src/main/resources/static/index.html b/src/main/resources/static/index.html
+--- a/src/main/resources/static/index.html	2026-09-29 14:17:02.614903741 +0200
++++ b/src/main/resources/static/index.html	2026-09-29 14:56:02.355727032 +0200
+@@ -22,6 +22,7 @@
+ <div id="status" class="idle" role="status" aria-live="polite"></div>
+ 
+ <h2>Sessions</h2>
++<label class="filter"><input type="checkbox" id="available-only"> Show only sessions with available places</label>
+ <table id="sessions">
+   <thead>
+   <tr>
+diff -ruN a/src/main/resources/static/styles.css b/src/main/resources/static/styles.css
+--- a/src/main/resources/static/styles.css	2026-09-29 14:17:02.602633860 +0200
++++ b/src/main/resources/static/styles.css	2026-09-29 14:56:02.360454383 +0200
+@@ -43,3 +43,6 @@
+ .badge.PENDING, .badge.TIMEOUT { background: var(--warn-bg); color: var(--warn-ink); }
+ .badge.DELIVERED, .badge.ACKNOWLEDGED, .badge.DUPLICATE_ACKNOWLEDGED { background: var(--ok-bg); color: var(--ok-ink); }
+ .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(420px, 1fr)); gap: 24px; }
++
++.filter { display: inline-flex; align-items: center; gap: 10px; margin-bottom: 12px; }
++.filter input { width: 22px; height: 22px; }

@@ -1,0 +1,11 @@
+--- a/src/main/kotlin/conference/ConfirmationDispatcher.kt
++++ b/src/main/kotlin/conference/ConfirmationDispatcher.kt
+@@ -47,7 +47,7 @@
+         var acknowledged = 0
+         for (row in pending) {
+             val bookingId = row["booking_id"] as String
+-            val deliveryKey = java.util.UUID.randomUUID().toString()
++            val deliveryKey = row["delivery_key"] as String
+             jdbc.update("UPDATE confirmations SET attempts=attempts+1 WHERE booking_id=?", bookingId)
+             try {
+                 gateway.deliver(bookingId, deliveryKey)

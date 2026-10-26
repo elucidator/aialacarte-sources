@@ -1,0 +1,25 @@
+Description: The candidate change uses a fresh delivery key per retry attempt.
+This breaks gateway deduplication: a timeout after acceptance + retry = two accepted
+confirmations for one booking. The fix is to revert to the stable delivery key
+stored with the notification.
+
+The defect: on timeout, the gateway has already accepted and recorded the message.
+When the sender retries with a NEW key, the gateway treats it as a new message
+and accepts it again. Result: two accepted confirmations.
+
+The fix: use notification.deliveryKey (stable, set when the booking was created)
+for every attempt. The gateway deduplicates on this key, so retries after timeout
+return the existing acceptance.
+
+--- a/src/main/kotlin/com/conferenceplanner/service/NotificationService.kt (candidate)
++++ b/src/main/kotlin/com/conferenceplanner/service/NotificationService.kt (corrected)
+@@ dispatch method
+-        // Generate a fresh delivery key for each attempt to avoid stale state
+-        val attemptDeliveryKey = "confirm-${notification.bookingId}-${UUID.randomUUID()}"
+-
+-        try {
+-            val delivery = deliverToGateway(attemptDeliveryKey, payload)
++        try {
++            val delivery = deliverToGateway(notification.deliveryKey, payload)
+
+(All references to attemptDeliveryKey revert to notification.deliveryKey)

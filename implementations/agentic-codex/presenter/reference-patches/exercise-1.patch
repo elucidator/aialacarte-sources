@@ -1,0 +1,97 @@
+--- a/src/main/kotlin/conference/ApiController.kt
++++ b/src/main/kotlin/conference/ApiController.kt
+@@ -11,8 +11,15 @@
+ @RestController
+ class ApiController(private val service: BookingService, private val jdbc: JdbcTemplate) {
+     @GetMapping("/api/sessions")
+-    fun sessions(@RequestParam(required=false) page: String?, @RequestParam(required=false) size: String?) =
+-        service.sessions(integer(page, 0, "page"), integer(size, 20, "size"))
++    fun sessions(@RequestParam(required=false) page: String?, @RequestParam(required=false) size: String?,
++                 @RequestParam(required=false) availableOnly: String?): SessionPage {
++        val filter = when (availableOnly) {
++            null, "false" -> false
++            "true" -> true
++            else -> badInput("availableOnly must be true or false.")
++        }
++        return service.sessions(integer(page, 0, "page"), integer(size, 20, "size"), filter)
++    }
+     private fun integer(value: String?, default: Int, name: String): Int =
+         if (value == null) default else value.toIntOrNull() ?: badInput("$name must be an integer.")
+     @PostMapping("/api/bookings")
+--- a/src/main/kotlin/conference/BookingService.kt
++++ b/src/main/kotlin/conference/BookingService.kt
+@@ -4,9 +4,9 @@
+ 
+ @Service
+ class BookingService(private val repository: PostgresBookingRepository) {
+-    fun sessions(page: Int, size: Int): SessionPage {
++    fun sessions(page: Int, size: Int, availableOnly: Boolean = false): SessionPage {
+         if (page < 0 || size !in 1..100) badInput("page must be non-negative and size must be 1..100.")
+-        return repository.sessions(page, size)
++        return repository.sessions(page, size, availableOnly)
+     }
+     fun identity(value: String?): String {
+         if (value == null || !value.matches(Regex("[a-z][a-z0-9-]{0,63}")))
+--- a/src/main/kotlin/conference/PostgresBookingRepository.kt
++++ b/src/main/kotlin/conference/PostgresBookingRepository.kt
+@@ -18,17 +18,18 @@
+     // Shared database lock excludes reset across all app processes, including notification dispatch.
+     fun sharedDemoLock() { jdbc.execute("SELECT pg_advisory_xact_lock_shared(731)") }
+ 
+-    fun sessions(page: Int, size: Int): SessionPage = transaction.execute {
++    fun sessions(page: Int, size: Int, availableOnly: Boolean = false): SessionPage = transaction.execute {
+         // One statement gives items and total a common MVCC snapshot.
+         val rows = jdbc.queryForList("""
+             WITH counts AS (
+                 SELECT s.*, count(b.id)::int AS active
+                 FROM sessions s LEFT JOIN bookings b ON b.session_id=s.id AND b.status='ACTIVE'
+                 GROUP BY s.id
+-            ), selected AS (SELECT * FROM counts ORDER BY id LIMIT ? OFFSET ?)
+-            SELECT selected.*, (SELECT count(*) FROM counts) AS total
++            ), eligible AS (SELECT * FROM counts WHERE ? = false OR active < capacity),
++            selected AS (SELECT * FROM eligible ORDER BY id LIMIT ? OFFSET ?)
++            SELECT selected.*, (SELECT count(*) FROM eligible) AS total
+             FROM (SELECT 1) anchor LEFT JOIN selected ON true ORDER BY selected.id
+-        """.trimIndent(), size, page.toLong() * size)
++        """.trimIndent(), availableOnly, size, page.toLong() * size)
+         val items = rows.filter { it["id"] != null }.map {
+             Session((it["id"] as Number).toLong(), it["title"] as String, it["room"] as String,
+                 (it["capacity"] as Number).toInt(), (it["active"] as Number).toInt(),
+--- a/src/main/resources/static/app.js
++++ b/src/main/resources/static/app.js
+@@ -22,7 +22,7 @@
+   const attendee = $('identity').value;
+   status('Loading…');
+   try {
+-    const [sessions, bookings] = await Promise.all([api(`/api/sessions?page=${page}&size=${size}`, {}, attendee), api('/api/bookings', {}, attendee)]);
++    const [sessions, bookings] = await Promise.all([api(`/api/sessions?page=${page}&size=${size}&availableOnly=${$("available-only").checked}`, {}, attendee), api('/api/bookings', {}, attendee)]);
+     if (version !== refreshVersion) return;
+     $('sessions').replaceChildren();
+     const owned = new Set(bookings.map(b => b.sessionId));
+@@ -46,7 +46,7 @@
+   } catch (error) { if (version === refreshVersion) status(error.message, 'error'); }
+ }
+ function setBusy(value) {
+-  busy = value; $('identity').disabled = value;
++  busy = value; $('identity').disabled = value; $('available-only').disabled = value;
+   if (value) document.querySelectorAll('main button').forEach(element => { element.disabled = true; });
+   else { $('sessions-tab').disabled = false; $('bookings-tab').disabled = false; }
+ }
+@@ -74,6 +74,7 @@
+   $('sessions-tab').setAttribute('aria-pressed', view === 'sessions'); $('bookings-tab').setAttribute('aria-pressed', view === 'bookings'); refresh();
+ }
+ $('identity').onchange = () => { page = 0; refresh(); };
++$('available-only').onchange = () => { page = 0; refresh(); };
+ $('sessions-tab').onclick = () => show('sessions'); $('bookings-tab').onclick = () => show('bookings');
+ $('previous').onclick = () => { page--; refresh(); }; $('next').onclick = () => { page++; refresh(); };
+ refresh();
+--- a/src/main/resources/static/index.html
++++ b/src/main/resources/static/index.html
+@@ -9,6 +9,7 @@
+ <nav aria-label="Views"><button id="sessions-tab" aria-pressed="true">Sessions</button><button id="bookings-tab" aria-pressed="false">My bookings</button><a href="demo.html">Local demo panel</a></nav>
+ <p id="status" role="status" aria-live="polite">Loading sessions…</p>
+ <section id="sessions-view"><h2>Conference sessions</h2>
++<label><input type="checkbox" id="available-only"> Only sessions with available places</label>
+ <div class="table-wrap"><table><thead><tr><th>Session</th><th>Room</th><th>Capacity</th><th>Active bookings</th><th>Available places</th><th>Action</th></tr></thead><tbody id="sessions"></tbody></table></div>
+ <div class="pagination"><button id="previous">Previous</button><span id="page-label"></span><button id="next">Next</button></div></section>
+ <section id="bookings-view" hidden><h2>My bookings</h2><div id="bookings"></div></section>

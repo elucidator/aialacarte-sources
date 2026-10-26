@@ -1,0 +1,159 @@
+:root {
+    --ink: #111827;
+    --muted: #4b5563;
+    --line: #d1d5db;
+    --paper: #ffffff;
+    --bg: #f3f4f6;
+    --accent: #1d4ed8;
+    --accent-dark: #1e3a8a;
+    --ok-bg: #ecfdf5;
+    --ok-ink: #065f46;
+    --err-bg: #fef2f2;
+    --err-ink: #991b1b;
+    --warn: #b45309;
+}
+
+* { box-sizing: border-box; }
+
+body {
+    margin: 0;
+    font-family: "Helvetica Neue", Arial, sans-serif;
+    font-size: 18px;
+    line-height: 1.45;
+    color: var(--ink);
+    background: var(--bg);
+}
+
+.top {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 28px;
+    background: var(--accent-dark);
+    color: #fff;
+}
+
+.top h1 { font-size: 26px; margin: 0; }
+
+.identity { display: flex; align-items: center; gap: 10px; }
+.identity label { font-weight: 600; }
+.identity select { font-size: 18px; padding: 6px 10px; border-radius: 6px; border: none; }
+.identity-name { font-weight: 700; }
+
+.badge {
+    background: #fde68a;
+    color: #78350f;
+    border-radius: 999px;
+    padding: 3px 12px;
+    font-size: 14px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+}
+
+.tabs { display: flex; gap: 8px; padding: 16px 28px 0; }
+
+.tab {
+    font-size: 18px;
+    font-weight: 600;
+    padding: 10px 20px;
+    border: 2px solid var(--line);
+    border-bottom: none;
+    border-radius: 10px 10px 0 0;
+    background: #e5e7eb;
+    color: var(--muted);
+    cursor: pointer;
+}
+
+.tab.active { background: var(--paper); color: var(--accent-dark); }
+
+main { padding: 0 28px 40px; }
+
+.view {
+    background: var(--paper);
+    border: 2px solid var(--line);
+    border-radius: 0 12px 12px 12px;
+    padding: 22px 26px 30px;
+    max-width: 1150px;
+}
+
+.view-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.view-head h2 { margin: 0 0 6px; font-size: 23px; }
+
+h3 { margin: 26px 0 8px; }
+
+.status { color: var(--muted); min-height: 24px; }
+.status.error { color: var(--err-ink); font-weight: 600; }
+
+table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+th { background: #eef2ff; font-size: 16px; text-transform: uppercase; letter-spacing: 0.03em; }
+td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+tbody tr:hover { background: #f9fafb; }
+
+button {
+    font-size: 17px;
+    font-weight: 600;
+    padding: 8px 16px;
+    border-radius: 8px;
+    border: none;
+    background: var(--accent);
+    color: #fff;
+    cursor: pointer;
+}
+
+button:hover:not(:disabled) { background: var(--accent-dark); }
+button:disabled { opacity: 0.5; cursor: not-allowed; }
+button.secondary { background: #e5e7eb; color: var(--ink); }
+button.secondary:hover:not(:disabled) { background: #d1d5db; }
+button.danger { background: #b91c1c; }
+button.danger:hover:not(:disabled) { background: #7f1d1d; }
+
+.pill {
+    display: inline-block;
+    background: var(--accent);
+    color: #fff;
+    border-radius: 999px;
+    padding: 0 10px;
+    font-size: 15px;
+}
+
+.banner, .toast {
+    margin: 14px 28px 0;
+    padding: 12px 18px;
+    border-radius: 8px;
+    font-weight: 600;
+}
+
+.banner { background: var(--err-bg); color: var(--err-ink); border: 2px solid #fca5a5; }
+.toast { background: var(--ok-bg); color: var(--ok-ink); border: 2px solid #6ee7b7; }
+.toast.warn { background: #fffbeb; color: var(--warn); border-color: #fcd34d; }
+
+.pager { display: flex; align-items: center; gap: 16px; margin-top: 16px; }
+
+.controls { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; margin: 14px 0; }
+
+.toggle {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: #fef3c7;
+    border: 2px solid #fcd34d;
+    color: #78350f;
+    border-radius: 8px;
+    padding: 8px 12px;
+    font-weight: 600;
+}
+
+.toggle input { width: 20px; height: 20px; }
+
+.activity { padding-left: 28px; }
+.activity li { margin-bottom: 6px; }
+.activity .kind { font-weight: 700; margin-right: 6px; }
+.activity .time { color: var(--muted); font-size: 15px; margin-left: 8px; }
+
+.empty { color: var(--muted); font-style: italic; }
+
+.note { color: var(--muted); font-size: 16px; }

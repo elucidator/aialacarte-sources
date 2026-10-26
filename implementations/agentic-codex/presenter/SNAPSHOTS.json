@@ -1,0 +1,22 @@
+{
+  "1": {
+    "workspaceHash": "0e162966865c9311edc9d86b2489db35523a1236ebe6d2e0053cc2641fa961e0",
+    "referencePatchHash": "07e628cb2a213eedcd667bba36559b3759ba3fd02f04c824df77688d7ce7bdd4"
+  },
+  "2": {
+    "workspaceHash": "03a6914eab8c253fc867c32ffee79e6b463509396d0655725ab1b378db220f21",
+    "referencePatchHash": "67a5589a92c9e64614c70dadecf080161e90edfae2c0fc2cf19fed144ebfb515"
+  },
+  "3": {
+    "workspaceHash": "f9ad62308ab82c61faec85ecffea593ece3d4e188475210fffbf5f78a90958fc",
+    "referencePatchHash": "d72c817ad7dc43a2ee8b255b4fcfcc5bec13cfe00ebbb43ff7547fb6d154967c"
+  },
+  "4": {
+    "workspaceHash": "1a2c0ae36fa97dab5aebfc412ddca127a99b1c47b925b55d159ef01d4529c4f6",
+    "referencePatchHash": "8c432de93237c99ae3d7ee7b8aef069ecaa79f6dc7dd1dfef3a7e677151c0aae"
+  },
+  "5": {
+    "workspaceHash": "cd2e42ba59027e8549b3038968e749b996b2d3444bce87f0dd4f69bcea46d5a9",
+    "referencePatchHash": "d81d595687b422df1b0911f4be82946d552283db3572c269b9aa757840051dba"
+  }
+}

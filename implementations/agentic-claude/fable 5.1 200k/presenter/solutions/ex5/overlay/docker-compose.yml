@@ -1,0 +1,42 @@
+name: conference-planner-ex5
+
+services:
+  db:
+    image: postgres:17.9-alpine
+    environment:
+      POSTGRES_DB: conference
+      POSTGRES_USER: conference
+      POSTGRES_PASSWORD: conference
+    ports:
+      - "5435:5432"
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U conference -d conference"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+
+  app:
+    build: .
+    image: conference-planner-ex5-app:local
+    environment:
+      DATABASE_URL: jdbc:postgresql://db:5432/conference
+      DATABASE_USER: conference
+      DATABASE_PASSWORD: conference
+      SPRING_PROFILES_ACTIVE: local-demo
+    ports:
+      - "8085:8080"
+    depends_on:
+      db:
+        condition: service_healthy
+    # wget ships with the Alpine runtime image; /health returns 200 only when the database answers.
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://localhost:8080/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+      start_period: 15s
+
+volumes:
+  db-data:

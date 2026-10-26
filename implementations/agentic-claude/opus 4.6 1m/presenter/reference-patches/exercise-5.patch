@@ -1,0 +1,10 @@
+Description: Fix the Docker Compose health check path.
+
+The application exposes /health (custom controller), not /actuator/health
+(Spring Actuator default path, which is not configured in this app).
+
+--- a/docker-compose.yml
++++ b/docker-compose.yml
+@@ app.healthcheck
+-      test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health"]
++      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]

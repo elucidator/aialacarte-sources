@@ -1,0 +1,52 @@
+Description: Extract BookingRepositoryInterface from BookingRepository.
+
+New file: src/main/kotlin/com/conferenceplanner/repository/BookingRepositoryInterface.kt
+
+--- /dev/null
++++ b/src/main/kotlin/com/conferenceplanner/repository/BookingRepositoryInterface.kt
+@@ -0,0 +1,28 @@
++package com.conferenceplanner.repository
++
++import com.conferenceplanner.model.*
++import java.util.UUID
++
++interface BookingRepositoryInterface {
++    fun findSessionsWithCounts(page: Int, size: Int): PagedResult<SessionView>
++    fun sessionExists(sessionId: UUID): Boolean
++    fun findSessionForUpdate(sessionId: UUID): Session?
++    fun getSessionCapacity(sessionId: UUID): Int
++    fun countActiveBookings(sessionId: UUID): Int
++    fun findByIdempotencyKey(key: String): Booking?
++    fun findActiveByAttendeeAndSession(attendee: String, sessionId: UUID): Booking?
++    fun insertBookingAndNotification(bookingId: UUID, sessionId: UUID, attendee: String, idempotencyKey: String, deliveryKey: String): Booking
++    fun findActiveByAttendee(attendee: String): List<Booking>
++    fun findById(id: UUID): Booking?
++    fun cancelBooking(id: UUID)
++    fun findSessionTitle(sessionId: UUID): String?
++    fun findPendingNotifications(): List<Notification>
++    fun incrementNotificationAttempt(id: UUID)
++    fun markNotificationDelivered(id: UUID)
++    fun findGatewayDeliveryByKey(deliveryKey: String): GatewayDelivery?
++    fun insertGatewayDelivery(id: UUID, deliveryKey: String, payload: String): GatewayDelivery
++    fun acknowledgeGatewayDelivery(id: UUID)
++    fun findAllNotificationsForActivity(): List<Map<String, Any?>>
++    fun findAllGatewayDeliveries(): List<GatewayDelivery>
++}
+
+--- a/src/main/kotlin/com/conferenceplanner/repository/BookingRepository.kt
++++ b/src/main/kotlin/com/conferenceplanner/repository/BookingRepository.kt
+@@ class declaration
+-class BookingRepository(private val jdbc: JdbcTemplate) {
++class BookingRepository(private val jdbc: JdbcTemplate) : BookingRepositoryInterface {
+
+--- a/src/main/kotlin/com/conferenceplanner/service/BookingService.kt
++++ b/src/main/kotlin/com/conferenceplanner/service/BookingService.kt
+@@ constructor
+-    private val repository: BookingRepository,
++    private val repository: BookingRepositoryInterface,
+
+--- a/src/main/kotlin/com/conferenceplanner/service/NotificationService.kt
++++ b/src/main/kotlin/com/conferenceplanner/service/NotificationService.kt
+@@ constructor
+-    private val repository: BookingRepository,
++    private val repository: BookingRepositoryInterface,

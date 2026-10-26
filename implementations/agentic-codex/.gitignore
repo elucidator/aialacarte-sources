@@ -1,0 +1,5 @@
+.gradle/
+build/
+exports/
+verification-output/
+.DS_Store

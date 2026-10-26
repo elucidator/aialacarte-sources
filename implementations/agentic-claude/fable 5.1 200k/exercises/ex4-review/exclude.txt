@@ -1,0 +1,2 @@
+src/test/kotlin/dev/conferenceplanner/NotificationTest.kt
+src/test/kotlin/dev/conferenceplanner/UiFlowTest.kt

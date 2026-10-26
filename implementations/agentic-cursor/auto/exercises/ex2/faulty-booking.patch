@@ -1,0 +1,46 @@
+--- src/main/kotlin/com/conference/planner/booking/BookingService.kt	2026-09-29 10:51:30.768674121 +0200
++++ /tmp/patchgen/src/main/kotlin/com/conference/planner/booking/BookingService.kt	2026-09-29 11:19:59.006982001 +0200
+@@ -32,6 +32,24 @@
+ ) {
+     private val tx = TransactionTemplate(transactionManager)
+ 
++    private fun maybePauseForRepro() {
++        val probe = System.getProperty("conference.fault.probe")
++        if (probe.isNullOrBlank()) {
++            return
++        }
++        val gate = java.nio.file.Path.of(probe)
++        java.nio.file.Files.createDirectories(gate)
++        java.nio.file.Files.writeString(gate.resolve("ready-" + Thread.currentThread().threadId()), "ready")
++        val go = gate.resolve("go")
++        val deadline = System.nanoTime() + java.util.concurrent.TimeUnit.SECONDS.toNanos(5)
++        while (System.nanoTime() < deadline) {
++            if (java.nio.file.Files.exists(go)) {
++                return
++            }
++            Thread.sleep(5)
++        }
++    }
++
+     fun listSessions(page: Int, size: Int): SessionPage {
+         if (page < 0) {
+             throw ApiException(400, "INVALID_PAGE", "page must be >= 0")
+@@ -76,7 +94,8 @@
+             return booking.toView() to false
+         }
+ 
+-        val session = repo.findSessionForUpdate(sessionId)
++        // Availability checked without session lock / advisory coordination around insert.
++        val session = repo.findSession(sessionId)
+             ?: throw ApiException(404, "SESSION_NOT_FOUND", "Unknown session id: $sessionId")
+ 
+         if (session.activeBookings >= session.capacity) {
+@@ -90,6 +109,8 @@
+             )
+         }
+ 
++        maybePauseForRepro()
++
+         return try {
+             val bookingId = repo.insertBooking(sessionId, attendeeId)
+             repo.insertBookingRequest(attendeeId, idempotencyKey, sessionId, bookingId)

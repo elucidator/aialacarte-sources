@@ -1,0 +1,36 @@
+diff --git a/src/main/kotlin/com/example/conferenceplanner/service/NotificationDispatcher.kt b/src/main/kotlin/com/example/conferenceplanner/service/NotificationDispatcher.kt
+index 278b945..5adcaae 100644
+--- a/src/main/kotlin/com/example/conferenceplanner/service/NotificationDispatcher.kt
++++ b/src/main/kotlin/com/example/conferenceplanner/service/NotificationDispatcher.kt
+@@ -13,7 +13,8 @@ import org.springframework.transaction.support.TransactionTemplate
+ /**
+  * Bounded dispatcher: a single manual dispatch call attempts each pending confirmation
+  * at most once. There is no background loop and no automatic backoff; a failed attempt
+- * stays pending until the next dispatch.
++ * stays pending until the next dispatch. The delivery key stored with the booking is
++ * reused on every attempt, including across restarts.
+  */
+ @Service
+ class NotificationDispatcher(
+@@ -33,9 +34,8 @@ class NotificationDispatcher(
+         var acknowledged = 0
+ 
+         for (notification in pending) {
+-            val attemptKey = attemptDeliveryKey(notification.bookingId, notification.attempts + 1)
+             try {
+-                val outcome = gateway.deliver(attemptKey, notification.bookingId)
++                val outcome = gateway.deliver(notification.deliveryKey, notification.bookingId)
+                 if (outcome == DeliveryOutcome.ACCEPTED) accepted++ else duplicates++
+                 tx.execute {
+                     val attempt = notifications.incrementAttempts(notification.deliveryKey)
+@@ -72,10 +72,6 @@ class NotificationDispatcher(
+         )
+     }
+ 
+-    /** A distinct delivery key per attempt so a genuine retry is never suppressed. */
+-    private fun attemptDeliveryKey(bookingId: Long, attemptNumber: Int): String =
+-        "booking:$bookingId#attempt-$attemptNumber"
+-
+     private fun recordFailedAttempt(deliveryKey: String, bookingId: Long, outcome: String, detail: String) {
+         tx.execute {
+             val attempt = notifications.incrementAttempts(deliveryKey)

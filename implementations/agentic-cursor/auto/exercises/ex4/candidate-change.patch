@@ -1,0 +1,31 @@
+--- src/main/kotlin/com/conference/planner/notify/Notification.kt	2026-09-29 10:33:27.272196138 +0200
++++ /tmp/patchgen4/src/main/kotlin/com/conference/planner/notify/Notification.kt	2026-09-29 11:19:59.086575461 +0200
+@@ -160,6 +160,7 @@
+ 
+             val failAfterAccept = demoSettings.isSimulateNotificationFailure()
+             val payload = "Confirmation for booking ${item.bookingId}"
++            val attemptKey = item.deliveryKey + "-attempt-" + (item.attemptCount + 1)
+ 
+             appTx.execute {
+                 jdbc.update(
+@@ -176,17 +177,17 @@
+                     VALUES (?, ?, 'ATTEMPT', ?)
+                     """.trimIndent(),
+                     item.bookingId,
+-                    item.deliveryKey,
++                    attemptKey,
+                     "Dispatch attempt ${item.attemptCount + 1}",
+                 )
+             }
+             demoActivity.record(
+                 "DELIVERY_ATTEMPT",
+-                "Attempt ${item.attemptCount + 1} for booking ${item.bookingId} key=${item.deliveryKey}",
++                "Attempt ${item.attemptCount + 1} for booking ${item.bookingId} key=$attemptKey",
+             )
+ 
+             val result = try {
+-                gateway.send(item.deliveryKey, item.bookingId, payload, failAfterAccept)
++                gateway.send(attemptKey, item.bookingId, payload, failAfterAccept)
+             } catch (ex: Exception) {
+                 failed++
+                 appTx.execute {

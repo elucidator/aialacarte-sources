@@ -1,0 +1,34 @@
+--- base/NotificationDispatcher.kt	2026-09-29 14:53:18
++++ candidate/NotificationDispatcher.kt	2026-09-29 14:53:18
+@@ -13,8 +13,7 @@
+ /**
+  * Bounded dispatcher: a single manual dispatch call attempts each pending confirmation
+  * at most once. There is no background loop and no automatic backoff; a failed attempt
+- * stays pending until the next dispatch. The delivery key stored with the booking is
+- * reused on every attempt, including across restarts.
++ * stays pending until the next dispatch.
+  */
+ @Service
+ class NotificationDispatcher(
+@@ -34,8 +33,9 @@
+         var acknowledged = 0
+ 
+         for (notification in pending) {
++            val attemptKey = attemptDeliveryKey(notification.bookingId, notification.attempts + 1)
+             try {
+-                val outcome = gateway.deliver(notification.deliveryKey, notification.bookingId)
++                val outcome = gateway.deliver(attemptKey, notification.bookingId)
+                 if (outcome == DeliveryOutcome.ACCEPTED) accepted++ else duplicates++
+                 tx.execute {
+                     val attempt = notifications.incrementAttempts(notification.deliveryKey)
+@@ -72,6 +72,10 @@
+         )
+     }
+ 
++    /** A distinct delivery key per attempt so a genuine retry is never suppressed. */
++    private fun attemptDeliveryKey(bookingId: Long, attemptNumber: Int): String =
++        "booking:$bookingId#attempt-$attemptNumber"
++
+     private fun recordFailedAttempt(deliveryKey: String, bookingId: Long, outcome: String, detail: String) {
+         tx.execute {
+             val attempt = notifications.incrementAttempts(deliveryKey)

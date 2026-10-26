@@ -1,0 +1,36 @@
+--- a/src/main/kotlin/com/conferenceplanner/service/NotificationService.kt
++++ b/src/main/kotlin/com/conferenceplanner/service/NotificationService.kt
+@@ -40,12 +40,15 @@
+         ) ?: "Unknown"
+         val payload = "Booking confirmed for $sessionTitle"
+
++        // Generate a fresh delivery key for each attempt to avoid stale state
++        val attemptDeliveryKey = "confirm-${notification.bookingId}-${UUID.randomUUID()}"
++
+         try {
+-            val delivery = deliverToGateway(notification.deliveryKey, payload)
++            val delivery = deliverToGateway(attemptDeliveryKey, payload)
+
+             if (simulateTimeout.get()) {
+-                log.info("Simulating timeout after gateway accepted delivery_key={}", notification.deliveryKey)
+-                return DispatchResult(notification.id, notification.deliveryKey, "TIMEOUT_AFTER_ACCEPT",
++                log.info("Simulating timeout after gateway accepted delivery_key={}", attemptDeliveryKey)
++                return DispatchResult(notification.id, attemptDeliveryKey, "TIMEOUT_AFTER_ACCEPT",
+                     gatewayAccepted = true, acknowledged = false)
+             }
+
+@@ -54,12 +57,12 @@
+             }
+             repository.acknowledgeGatewayDelivery(delivery.id)
+
+-            return DispatchResult(notification.id, notification.deliveryKey, "DELIVERED",
++            return DispatchResult(notification.id, attemptDeliveryKey, "DELIVERED",
+                 gatewayAccepted = delivery.accepted, acknowledged = true)
+
+         } catch (e: Exception) {
+             log.error("Dispatch failed for notification={}: {}", notification.id, e.message)
+-            return DispatchResult(notification.id, notification.deliveryKey, "FAILED",
++            return DispatchResult(notification.id, attemptDeliveryKey, "FAILED",
+                 gatewayAccepted = false, acknowledged = false)
+         }
+     }

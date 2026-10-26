@@ -1,0 +1,11 @@
+--- a/src/main/kotlin/conference/PostgresBookingRepository.kt
++++ b/src/main/kotlin/conference/PostgresBookingRepository.kt
+@@ -48,7 +48,7 @@
+                 conflict("KEY_REUSED", "This request key was used for a different session.")
+             return@execute BookingResult(find(row["booking_id"] as String)!!, true)
+         }
+-        val capacity = jdbc.queryForList("SELECT capacity FROM sessions WHERE id=?", sessionId)
++        val capacity = jdbc.queryForList("SELECT capacity FROM sessions WHERE id=? FOR UPDATE", sessionId)
+             .firstOrNull()?.get("capacity") as Number? ?: missing("Session not found.")
+         if (jdbc.queryForObject("SELECT count(*) FROM bookings WHERE attendee=? AND session_id=? AND status='ACTIVE'",
+                 Long::class.java, attendee, sessionId)!! > 0)

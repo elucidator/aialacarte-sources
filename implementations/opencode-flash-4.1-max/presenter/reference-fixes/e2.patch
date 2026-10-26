@@ -1,0 +1,13 @@
+diff --git a/src/main/kotlin/com/example/conferenceplanner/repository/BookingRepository.kt b/src/main/kotlin/com/example/conferenceplanner/repository/BookingRepository.kt
+index 9ab03fd..7f4463b 100644
+--- a/src/main/kotlin/com/example/conferenceplanner/repository/BookingRepository.kt
++++ b/src/main/kotlin/com/example/conferenceplanner/repository/BookingRepository.kt
+@@ -32,7 +32,7 @@ class BookingRepository(private val jdbc: JdbcTemplate) {
+ 
+     fun findSession(sessionId: Long): SessionRow? =
+         jdbc.query(
+-            "select id, title, room, capacity from sessions where id = ?",
++            "select id, title, room, capacity from sessions where id = ? for update",
+             { rs, _ -> SessionRow(rs.getLong("id"), rs.getString("title"), rs.getString("room"), rs.getInt("capacity")) },
+             sessionId,
+         ).firstOrNull()

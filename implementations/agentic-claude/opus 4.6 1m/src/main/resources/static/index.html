@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Conference Planner</title>
+    <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+    <header>
+        <h1>Conference Planner</h1>
+        <div id="identity-selector">
+            <label>Demo Identity:</label>
+            <select id="attendee-select">
+                <option value="alice">Alice</option>
+                <option value="bob">Bob</option>
+            </select>
+            <span class="demo-badge">DEMO</span>
+        </div>
+    </header>
+
+    <nav>
+        <button class="nav-btn active" data-view="sessions">Sessions</button>
+        <button class="nav-btn" data-view="bookings">My Bookings</button>
+        <button class="nav-btn" data-view="demo">Demo Panel</button>
+    </nav>
+
+    <main>
+        <div id="status-bar" class="hidden"></div>
+
+        <section id="sessions-view" class="view active">
+            <h2>Available Sessions</h2>
+            <div id="sessions-loading" class="loading">Loading sessions...</div>
+            <table id="sessions-table" class="hidden">
+                <thead>
+                    <tr>
+                        <th>Title</th>
+                        <th>Room</th>
+                        <th>Capacity</th>
+                        <th>Booked</th>
+                        <th>Available</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody id="sessions-body"></tbody>
+            </table>
+        </section>
+
+        <section id="bookings-view" class="view">
+            <h2>My Bookings</h2>
+            <div id="bookings-loading" class="loading">Loading bookings...</div>
+            <div id="bookings-empty" class="hidden">No active bookings.</div>
+            <table id="bookings-table" class="hidden">
+                <thead>
+                    <tr>
+                        <th>Session</th>
+                        <th>Booked At</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody id="bookings-body"></tbody>
+            </table>
+        </section>
+
+        <section id="demo-view" class="view">
+            <h2>Demo Panel</h2>
+            <p class="demo-note">Controls for live demonstration. Requires local-demo profile.</p>
+
+            <div class="demo-controls">
+                <div class="demo-card">
+                    <h3>Seed Data</h3>
+                    <p>Reset all data to initial seed state.</p>
+                    <button id="btn-reset" class="btn btn-danger">Reset to Seed</button>
+                </div>
+
+                <div class="demo-card">
+                    <h3>Notification Dispatch</h3>
+                    <p>Deliver pending booking confirmations.</p>
+                    <button id="btn-dispatch" class="btn btn-primary">Dispatch Pending</button>
+                    <div id="dispatch-result" class="hidden"></div>
+                </div>
+
+                <div class="demo-card">
+                    <h3>Simulate Timeout</h3>
+                    <p>Gateway accepts but sender sees timeout.</p>
+                    <div class="toggle-row">
+                        <button id="btn-timeout-on" class="btn btn-warning">Enable</button>
+                        <button id="btn-timeout-off" class="btn">Disable</button>
+                        <span id="timeout-status"></span>
+                    </div>
+                </div>
+
+                <div class="demo-card full-width">
+                    <h3>Activity Log</h3>
+                    <button id="btn-refresh-activity" class="btn">Refresh</button>
+                    <div id="activity-log"></div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <script src="/app.js"></script>
+</body>
+</html>

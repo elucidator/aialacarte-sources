@@ -1,0 +1,86 @@
+--- a/src/main/kotlin/com/conferenceplanner/controller/SessionController.kt
++++ b/src/main/kotlin/com/conferenceplanner/controller/SessionController.kt
+@@ -14,7 +14,8 @@ class SessionController(private val bookingService: BookingService) {
+     fun listSessions(
+         @RequestParam(defaultValue = "0") page: Int,
+-        @RequestParam(defaultValue = "20") size: Int
++        @RequestParam(defaultValue = "20") size: Int,
++        @RequestParam(required = false) availableOnly: String?
+     ): ResponseEntity<Any> {
+         if (page < 0) {
+             return ResponseEntity.badRequest().body(
+@@ -25,7 +26,16 @@ class SessionController(private val bookingService: BookingService) {
+                 ApiError("INVALID_SIZE", "Size must be between 1 and 100")
+             )
+         }
+-        return ResponseEntity.ok(bookingService.listSessions(page, size))
++        val filterAvailable = when (availableOnly) {
++            null -> null
++            "true" -> true
++            "false" -> false
++            else -> return ResponseEntity.badRequest().body(
++                ApiError("INVALID_FILTER", "availableOnly must be true or false")
++            )
++        }
++        return ResponseEntity.ok(bookingService.listSessions(page, size, filterAvailable))
+     }
+ }
+
+--- a/src/main/kotlin/com/conferenceplanner/service/BookingService.kt
++++ b/src/main/kotlin/com/conferenceplanner/service/BookingService.kt
+@@ -13,8 +13,8 @@ class BookingService(
+     private val transactionTemplate: TransactionTemplate
+ ) {
+
+-    fun listSessions(page: Int, size: Int): PagedResult<SessionView> {
+-        return repository.findSessionsWithCounts(page, size)
++    fun listSessions(page: Int, size: Int, availableOnly: Boolean? = null): PagedResult<SessionView> {
++        return repository.findSessionsWithCounts(page, size, availableOnly)
+     }
+
+--- a/src/main/kotlin/com/conferenceplanner/repository/BookingRepository.kt
++++ b/src/main/kotlin/com/conferenceplanner/repository/BookingRepository.kt
+@@ -23,8 +23,13 @@ class BookingRepository(private val jdbc: JdbcTemplate) {
+         )
+     }
+
+-    fun findSessionsWithCounts(page: Int, size: Int): PagedResult<SessionView> {
+-        val total = jdbc.queryForObject("SELECT count(*) FROM sessions", Long::class.java)!!
++    fun findSessionsWithCounts(page: Int, size: Int, availableOnly: Boolean? = null): PagedResult<SessionView> {
++        val havingClause = if (availableOnly == true) "HAVING s.capacity - coalesce(count(b.id), 0) > 0" else ""
++        val total = jdbc.queryForObject(
++            """SELECT count(*) FROM (
++                SELECT s.id FROM sessions s LEFT JOIN bookings b ON s.id = b.session_id AND b.status = 'ACTIVE'
++                GROUP BY s.id $havingClause
++            ) sub""", Long::class.java
++        )!!
+         val items = jdbc.query(
+             """
+             SELECT s.id, s.title, s.room, s.capacity,
+@@ -33,7 +38,8 @@ class BookingRepository(private val jdbc: JdbcTemplate) {
+             FROM sessions s
+             LEFT JOIN (
+                 SELECT session_id, count(*) AS cnt
+                 FROM bookings WHERE status = 'ACTIVE'
+                 GROUP BY session_id
+             ) b ON s.id = b.session_id
++            ${if (availableOnly == true) "WHERE s.capacity - coalesce(b.cnt, 0) > 0" else ""}
+             ORDER BY s.sort_order
+             LIMIT ? OFFSET ?
+             """,
+
+--- a/src/main/resources/static/index.html
++++ b/src/main/resources/static/index.html
+@@ (sessions-view section, before the table)
++            <label style="display:flex;align-items:center;gap:0.5rem;margin-bottom:1rem">
++                <input type="checkbox" id="available-only"> Show available only
++            </label>
+
+--- a/src/main/resources/static/app.js
++++ b/src/main/resources/static/app.js
+@@ (loadSessions function)
++    const availFilter = $('#available-only').checked ? '&availableOnly=true' : '';
+-    const resp = await fetch('/api/sessions?page=0&size=20');
++    const resp = await fetch('/api/sessions?page=0&size=20' + availFilter);
++
++$('#available-only').addEventListener('change', loadSessions);

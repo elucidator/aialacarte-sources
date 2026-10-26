@@ -1,0 +1,6 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Local demo panel</title><link rel="stylesheet" href="style.css"></head>
+<body><header><p class="eyebrow">Presenter controls</p><h1>Local demo panel</h1><a href="/">Back to Conference Planner</a><p>Available only with the local-demo profile. Uses fictional data and a fake notification gateway.</p></header>
+<main><p id="status" role="status" aria-live="polite">Loading activity…</p><div id="controls" class="panel" hidden><div class="controls">
+<label>Gateway <select id="mode"><option value="normal">Normal acknowledgement</option><option value="fail">Reject notification</option><option value="lost-ack">Accept, then lose acknowledgement</option></select></label>
+<button id="dispatch">Dispatch pending confirmations</button><button id="refresh">Refresh activity</button><button id="reset" class="danger">Reset fictional seed data</button></div></div>
+<p id="counts"></p><section class="panel"><h2>Delivery attempts</h2><pre id="attempts"></pre></section><section class="panel"><h2>Accepted confirmations</h2><pre id="accepted"></pre></section><section class="panel"><h2>Activity, including acknowledgements</h2><pre id="events"></pre></section></main><script src="demo.js" defer></script></body></html>

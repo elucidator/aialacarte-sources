@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Conference Planner</title>
+  <link rel="stylesheet" href="/css/app.css">
+</head>
+<body>
+  <header class="top">
+    <div class="brand">
+      <h1>Conference Planner</h1>
+      <p class="tag">Browse sessions · book a place · manage bookings</p>
+    </div>
+    <div class="identity" aria-label="Demo identity selector">
+      <label for="attendee">Demo identity</label>
+      <select id="attendee">
+        <option value="1">Alice</option>
+        <option value="2">Bob</option>
+      </select>
+      <span class="hint">Not authentication — local demo only</span>
+    </div>
+  </header>
+
+  <div id="status" class="status" role="status" aria-live="polite"></div>
+
+  <main class="layout">
+    <section class="panel" aria-labelledby="sessions-heading">
+      <div class="panel-head">
+        <h2 id="sessions-heading">Sessions</h2>
+        <button type="button" id="refresh-sessions" class="secondary">Refresh</button>
+      </div>
+      <div id="sessions-loading" class="loading hidden">Loading sessions…</div>
+      <table id="sessions-table">
+        <thead>
+          <tr>
+            <th>Title</th>
+            <th>Room</th>
+            <th>Capacity</th>
+            <th>Active</th>
+            <th>Available</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="sessions-body"></tbody>
+      </table>
+    </section>
+
+    <section class="panel" aria-labelledby="bookings-heading">
+      <div class="panel-head">
+        <h2 id="bookings-heading">My bookings</h2>
+        <button type="button" id="refresh-bookings" class="secondary">Refresh</button>
+      </div>
+      <div id="bookings-loading" class="loading hidden">Loading bookings…</div>
+      <ul id="bookings-list" class="bookings"></ul>
+      <p id="bookings-empty" class="empty hidden">No active bookings for this identity.</p>
+    </section>
+  </main>
+
+  <section id="demo-panel" class="panel demo hidden" aria-labelledby="demo-heading">
+    <div class="panel-head">
+      <h2 id="demo-heading">Local demo panel</h2>
+      <span class="badge">profile: local-demo</span>
+    </div>
+    <p class="demo-note">Mutation and inspection controls for the stage demo. Disabled outside the local-demo profile.</p>
+    <div class="demo-controls">
+      <button type="button" id="demo-reset">Reset seed data</button>
+      <label class="check">
+        <input type="checkbox" id="simulate-failure">
+        Simulate notification failure (timeout after accept)
+      </label>
+      <button type="button" id="demo-dispatch" class="secondary">Dispatch pending confirmations</button>
+      <button type="button" id="demo-refresh" class="secondary">Refresh activity</button>
+    </div>
+    <dl class="metrics" id="demo-metrics">
+      <div><dt>Pending</dt><dd id="m-pending">–</dd></div>
+      <div><dt>Gateway accepted</dt><dd id="m-accepted">–</dd></div>
+      <div><dt>Acknowledgements</dt><dd id="m-acks">–</dd></div>
+    </dl>
+    <h3>Activity</h3>
+    <ol id="activity-list" class="activity"></ol>
+  </section>
+
+  <script src="/js/app.js"></script>
+</body>
+</html>

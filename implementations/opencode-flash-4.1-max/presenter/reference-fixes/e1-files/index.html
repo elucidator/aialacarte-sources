@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Conference Planner</title>
+    <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+<header class="top">
+    <h1>Conference Planner</h1>
+    <div class="identity">
+        <span class="badge">DEMO identity selector &mdash; not authentication</span>
+        <label for="identity">Demo identity</label>
+        <select id="identity">
+            <option value="Alice">Alice</option>
+            <option value="Bob">Bob</option>
+        </select>
+    </div>
+</header>
+
+<div id="banner" class="banner" role="status" aria-live="polite" hidden></div>
+<div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+
+<nav class="tabs" aria-label="Views">
+    <button class="tab active" data-view="sessions">Sessions</button>
+    <button class="tab" data-view="bookings">My bookings <span id="booking-count" class="pill">0</span></button>
+    <button class="tab" data-view="demo">Local demo panel</button>
+</nav>
+
+<main>
+    <section id="view-sessions" class="view">
+        <div class="view-head">
+            <h2>Conference sessions</h2>
+            <div class="controls">
+                <label class="toggle">
+                    <input type="checkbox" id="available-only">
+                    Only sessions with available places
+                </label>
+                <button id="refresh-sessions" class="secondary">Refresh</button>
+            </div>
+        </div>
+        <p id="sessions-status" class="status">Loading sessions&hellip;</p>
+        <table id="sessions-table" hidden>
+            <thead>
+            <tr>
+                <th>Title</th>
+                <th>Room</th>
+                <th class="num">Capacity</th>
+                <th class="num">Active bookings</th>
+                <th class="num">Available places</th>
+                <th>Action</th>
+            </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+        <div class="pager">
+            <button id="prev-page" class="secondary">&larr; Previous</button>
+            <span id="page-info">Page 1</span>
+            <button id="next-page" class="secondary">Next &rarr;</button>
+        </div>
+    </section>
+
+    <section id="view-bookings" class="view" hidden>
+        <div class="view-head">
+            <h2>My bookings for <span id="bookings-identity" class="identity-name">Alice</span></h2>
+            <button id="refresh-bookings" class="secondary">Refresh</button>
+        </div>
+        <p id="bookings-status" class="status">Loading bookings&hellip;</p>
+        <table id="bookings-table" hidden>
+            <thead>
+            <tr>
+                <th>Session</th>
+                <th>Room</th>
+                <th>Booked at</th>
+                <th>Action</th>
+            </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+    </section>
+
+    <section id="view-demo" class="view" hidden>
+        <div class="view-head">
+            <h2>Local demo panel</h2>
+            <span class="badge">Requires the <code>local-demo</code> profile</span>
+        </div>
+        <p id="demo-status" class="status">Loading demo state&hellip;</p>
+        <div class="controls">
+            <button id="reset-demo" class="danger">Reset demo data</button>
+            <button id="repeat-request" class="secondary" disabled title="Sends the last booking request again with the same Idempotency-Key">Repeat last booking request</button>
+            <label class="toggle">
+                <input type="checkbox" id="failure-toggle">
+                Simulate notification failure (next dispatch loses its acknowledgement)
+            </label>
+            <button id="dispatch">Dispatch pending confirmations</button>
+            <button id="refresh-demo" class="secondary">Refresh panel</button>
+        </div>
+        <h3>Confirmations</h3>
+        <table id="notifications-table" hidden>
+            <thead>
+            <tr>
+                <th>Booking</th>
+                <th>Session</th>
+                <th>Status</th>
+                <th class="num">Attempts</th>
+                <th class="num">Accepted deliveries</th>
+                <th>Delivery key</th>
+            </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+        <h3>Demo activity</h3>
+        <ol id="activity-list" class="activity"></ol>
+    </section>
+</main>
+
+<script src="/app.js"></script>
+</body>
+</html>

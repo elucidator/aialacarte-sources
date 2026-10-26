@@ -1,0 +1,23 @@
+Description: Fix overbooking by adding SELECT ... FOR UPDATE on the session row.
+
+The faulty code checks capacity with a plain SELECT, allowing concurrent transactions
+to both read the same count and both insert. The fix locks the session row before
+reading capacity, serializing concurrent booking attempts.
+
+--- a/src/main/kotlin/com/conferenceplanner/service/BookingService.kt
++++ b/src/main/kotlin/com/conferenceplanner/service/BookingService.kt
+@@ -29,9 +29,10 @@
+                 return@execute BookingResult.AlreadyBooked
+             }
+
+-            // Check capacity (reads current count without locking the session row)
+-            val capacity = repository.getSessionCapacity(sessionId)
+-            val activeCount = repository.countActiveBookings(sessionId)
++            // Lock the session row to serialize concurrent bookings
++            val session = repository.findSessionForUpdate(sessionId)
++                ?: return@execute BookingResult.SessionNotFound
++            val activeCount = repository.countActiveBookings(sessionId)
++            val capacity = session.capacity
+             if (activeCount >= capacity) {
+                 return@execute BookingResult.SessionFull
+             }

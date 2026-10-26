@@ -1,0 +1,117 @@
+diff --git a/src/main/kotlin/com/example/conferenceplanner/repository/SessionRepository.kt b/src/main/kotlin/com/example/conferenceplanner/repository/SessionRepository.kt
+index 49e693a..46705d5 100644
+--- a/src/main/kotlin/com/example/conferenceplanner/repository/SessionRepository.kt
++++ b/src/main/kotlin/com/example/conferenceplanner/repository/SessionRepository.kt
+@@ -8,8 +8,22 @@ import org.springframework.stereotype.Repository
+ @Repository
+ class SessionRepository(private val jdbc: JdbcTemplate) {
+ 
+-    fun list(page: Int, size: Int): PageResponse<SessionSummary> {
+-        val total = jdbc.queryForObject("select count(*) from sessions", Long::class.java) ?: 0L
++    fun list(page: Int, size: Int, availableOnly: Boolean): PageResponse<SessionSummary> {
++        val total = jdbc.queryForObject(
++            """
++            select count(*)
++            from sessions s
++            left join (
++                select session_id, count(*) as active_bookings
++                from bookings
++                where status = 'ACTIVE'
++                group by session_id
++            ) b on b.session_id = s.id
++            where (not ? or s.capacity > coalesce(b.active_bookings, 0))
++            """.trimIndent(),
++            Long::class.java,
++            availableOnly,
++        ) ?: 0L
+         val items = jdbc.query(
+             """
+             select s.id, s.title, s.room, s.capacity,
+@@ -21,6 +35,7 @@ class SessionRepository(private val jdbc: JdbcTemplate) {
+                 where status = 'ACTIVE'
+                 group by session_id
+             ) b on b.session_id = s.id
++            where (not ? or s.capacity > coalesce(b.active_bookings, 0))
+             order by s.id asc
+             limit ? offset ?
+             """.trimIndent(),
+@@ -36,7 +51,7 @@ class SessionRepository(private val jdbc: JdbcTemplate) {
+                     availablePlaces = capacity - active,
+                 )
+             },
+-            size, page.toLong() * size,
++            availableOnly, size, page.toLong() * size,
+         )
+         return PageResponse(items = items, page = page, size = size, totalElements = total)
+     }
+diff --git a/src/main/kotlin/com/example/conferenceplanner/web/SessionController.kt b/src/main/kotlin/com/example/conferenceplanner/web/SessionController.kt
+index dd24cd2..bacbfda 100644
+--- a/src/main/kotlin/com/example/conferenceplanner/web/SessionController.kt
++++ b/src/main/kotlin/com/example/conferenceplanner/web/SessionController.kt
+@@ -17,6 +17,7 @@ class SessionController(private val sessionRepository: SessionRepository) {
+     fun list(
+         @RequestParam(defaultValue = "0") page: Int,
+         @RequestParam(defaultValue = "20") size: Int,
++        @RequestParam(defaultValue = "false") availableOnly: Boolean,
+     ): PageResponse<SessionSummary> {
+         if (page < 0) {
+             throw ApiException(HttpStatus.BAD_REQUEST, "INVALID_PAGE", "page must be >= 0 but was $page")
+@@ -24,6 +25,6 @@ class SessionController(private val sessionRepository: SessionRepository) {
+         if (size < 1 || size > 100) {
+             throw ApiException(HttpStatus.BAD_REQUEST, "INVALID_SIZE", "size must be between 1 and 100 but was $size")
+         }
+-        return sessionRepository.list(page, size)
++        return sessionRepository.list(page, size, availableOnly)
+     }
+ }
+diff --git a/src/main/resources/static/app.js b/src/main/resources/static/app.js
+index 806c060..e5c9d7d 100644
+--- a/src/main/resources/static/app.js
++++ b/src/main/resources/static/app.js
+@@ -2,6 +2,7 @@
+ 
+ const state = {
+     identity: "Alice",
++    availableOnly: false,
+     page: 0,
+     size: 20,
+     totalElements: 0,
+@@ -73,7 +74,7 @@ async function loadSessions() {
+     el("sessions-status").textContent = "Loading sessions…";
+     el("sessions-status").classList.remove("error");
+     try {
+-        const { body } = await api(`/api/sessions?page=${state.page}&size=${state.size}`);
++        const { body } = await api(`/api/sessions?page=${state.page}&size=${state.size}&availableOnly=${state.availableOnly}`);
+         state.sessions = body.items;
+         state.totalElements = body.totalElements;
+         renderSessions();
+@@ -366,4 +367,10 @@ el("dispatch").addEventListener("click", () => dispatchPending());
+ el("repeat-request").addEventListener("click", () => repeatLastRequest());
+ el("failure-toggle").addEventListener("change", (event) => toggleFailure(event.target.checked));
+ 
++el("available-only").addEventListener("change", async (event) => {
++    state.availableOnly = event.target.checked;
++    state.page = 0;
++    await loadSessions();
++});
++
+ refreshAll();
+diff --git a/src/main/resources/static/index.html b/src/main/resources/static/index.html
+index 4dc13ea..cf686a4 100644
+--- a/src/main/resources/static/index.html
++++ b/src/main/resources/static/index.html
+@@ -32,7 +32,13 @@
+     <section id="view-sessions" class="view">
+         <div class="view-head">
+             <h2>Conference sessions</h2>
+-            <button id="refresh-sessions" class="secondary">Refresh</button>
++            <div class="controls">
++                <label class="toggle">
++                    <input type="checkbox" id="available-only">
++                    Only sessions with available places
++                </label>
++                <button id="refresh-sessions" class="secondary">Refresh</button>
++            </div>
+         </div>
+         <p id="sessions-status" class="status">Loading sessions&hellip;</p>
+         <table id="sessions-table" hidden>

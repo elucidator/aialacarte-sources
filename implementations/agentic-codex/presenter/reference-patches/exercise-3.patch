@@ -1,0 +1,65 @@
+--- /dev/null
++++ b/src/main/kotlin/conference/BookingRepository.kt
+@@ -0,0 +1,8 @@
++package conference
++
++interface BookingRepository {
++    fun sessions(page: Int, size: Int): SessionPage
++    fun book(attendee: String, key: String, sessionId: Long): BookingResult
++    fun bookings(attendee: String): List<Booking>
++    fun cancel(attendee: String, id: String)
++}
+--- a/src/main/kotlin/conference/BookingService.kt
++++ b/src/main/kotlin/conference/BookingService.kt
+@@ -3,7 +3,7 @@
+ import org.springframework.stereotype.Service
+ 
+ @Service
+-class BookingService(private val repository: PostgresBookingRepository) {
++class BookingService(private val repository: BookingRepository) {
+     fun sessions(page: Int, size: Int): SessionPage {
+         if (page < 0 || size !in 1..100) badInput("page must be non-negative and size must be 1..100.")
+         return repository.sessions(page, size)
+--- a/src/main/kotlin/conference/PostgresBookingRepository.kt
++++ b/src/main/kotlin/conference/PostgresBookingRepository.kt
+@@ -8,7 +8,7 @@
+ import java.util.UUID
+ 
+ @Repository
+-class PostgresBookingRepository(private val jdbc: JdbcTemplate, manager: PlatformTransactionManager) {
++class PostgresBookingRepository(private val jdbc: JdbcTemplate, manager: PlatformTransactionManager) : BookingRepository {
+     private val transaction = TransactionTemplate(manager).apply { timeout = 15 }
+ 
+     private fun booking(rs: ResultSet) = Booking(rs.getString("id"), rs.getLong("session_id"),
+@@ -18,7 +18,7 @@
+     // Shared database lock excludes reset across all app processes, including notification dispatch.
+     fun sharedDemoLock() { jdbc.execute("SELECT pg_advisory_xact_lock_shared(731)") }
+ 
+-    fun sessions(page: Int, size: Int): SessionPage = transaction.execute {
++    override fun sessions(page: Int, size: Int): SessionPage = transaction.execute {
+         // One statement gives items and total a common MVCC snapshot.
+         val rows = jdbc.queryForList("""
+             WITH counts AS (
+@@ -37,7 +37,7 @@
+         SessionPage(items, page, size, (rows.first()["total"] as Number).toLong())
+     }!!
+ 
+-    fun book(attendee: String, key: String, sessionId: Long): BookingResult = transaction.execute {
++    override fun book(attendee: String, key: String, sessionId: Long): BookingResult = transaction.execute {
+         sharedDemoLock()
+         // Hash collisions only serialize unrelated requests; the durable key is still the composite PK.
+         jdbc.queryForList("SELECT pg_advisory_xact_lock(hashtextextended(?, 0))", "$attendee:$key")
+@@ -65,11 +65,11 @@
+     }!!
+ 
+     fun find(id: String): Booking? = jdbc.query("$bookingSelect WHERE b.id=?", { rs, _ -> booking(rs) }, id).firstOrNull()
+-    fun bookings(attendee: String): List<Booking> = jdbc.query(
++    override fun bookings(attendee: String): List<Booking> = jdbc.query(
+         "$bookingSelect WHERE b.attendee=? AND b.status='ACTIVE' ORDER BY b.created_at, b.id",
+         { rs, _ -> booking(rs) }, attendee)
+ 
+-    fun cancel(attendee: String, id: String) { transaction.executeWithoutResult {
++    override fun cancel(attendee: String, id: String) { transaction.executeWithoutResult {
+         sharedDemoLock()
+         val owned = find(id)?.takeIf { it.attendee == attendee } ?: missing("Booking not found.")
+         // The same session lock orders bookings and cancellations; UPDATE releases the place once.

@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Conference Planner</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+<header>
+  <h1>Conference Planner</h1>
+  <nav><a href="/">Sessions</a><a href="/demo.html">Demo panel</a></nav>
+  <label class="identity">
+    <span>Demo identity <small>(not authentication)</small></span>
+    <select id="identity" aria-label="Demo identity">
+      <option value="alice">Alice</option>
+      <option value="bob">Bob</option>
+    </select>
+  </label>
+</header>
+
+<div id="status" class="idle" role="status" aria-live="polite"></div>
+
+<h2>Sessions</h2>
+<table id="sessions">
+  <thead>
+  <tr>
+    <th>Title</th><th>Room</th>
+    <th class="num">Capacity</th><th class="num">Active bookings</th><th class="num">Available</th>
+    <th></th>
+  </tr>
+  </thead>
+  <tbody><tr><td colspan="6" class="empty">Loading sessions…</td></tr></tbody>
+</table>
+
+<h2>My bookings</h2>
+<table id="bookings">
+  <thead><tr><th>Booking</th><th>Session</th><th>Booked at</th><th></th></tr></thead>
+  <tbody><tr><td colspan="4" class="empty">Loading bookings…</td></tr></tbody>
+</table>
+
+<script src="/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,15 @@
+spring:
+  application:
+    name: conference-planner
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/conference}
+    username: ${SPRING_DATASOURCE_USERNAME:conference}
+    password: ${SPRING_DATASOURCE_PASSWORD:conference}
+    hikari:
+      connection-timeout: 2000
+      maximum-pool-size: 10
+  flyway:
+    enabled: true
+
+server:
+  port: ${SERVER_PORT:8080}

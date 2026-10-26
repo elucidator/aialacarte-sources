@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Conference Planner – Demo panel</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+<header>
+  <h1>Demo panel</h1>
+  <nav><a href="/">Sessions</a><a href="/demo.html">Demo panel</a></nav>
+</header>
+
+<div id="status" class="idle" role="status" aria-live="polite"></div>
+
+<section id="disabled" hidden>
+  <h2>Demo panel disabled</h2>
+  <p>The demo endpoints only exist when the application runs with the <code>local-demo</code> Spring profile.</p>
+</section>
+
+<section id="panel" hidden>
+  <div class="controls">
+    <button id="reset" class="secondary">Reset seed data</button>
+    <button id="dispatch">Dispatch pending confirmations</button>
+    <button id="toggle-gateway" class="secondary">…</button>
+    <button id="reload" class="secondary">Refresh</button>
+  </div>
+  <p>Gateway mode: <strong id="gateway-mode">…</strong></p>
+
+  <div class="grid">
+    <div>
+      <h2>Confirmations (outbox)</h2>
+      <table><thead><tr><th>Booking</th><th>Delivery key</th><th>Status</th><th class="num">Attempts</th></tr></thead>
+        <tbody id="confirmations"></tbody></table>
+    </div>
+    <div>
+      <h2>Delivery attempts</h2>
+      <table><thead><tr><th>Booking</th><th class="num">#</th><th>Delivery key</th><th>Outcome</th></tr></thead>
+        <tbody id="attempts"></tbody></table>
+    </div>
+    <div>
+      <h2>Gateway: accepted messages</h2>
+      <table><thead><tr><th>Delivery key</th><th>Recipient</th><th>Accepted at</th></tr></thead>
+        <tbody id="gateway"></tbody></table>
+    </div>
+    <div>
+      <h2>Activity</h2>
+      <table><thead><tr><th>Time</th><th>Kind</th><th>Message</th></tr></thead>
+        <tbody id="activity"></tbody></table>
+    </div>
+  </div>
+</section>
+
+<script src="/demo.js"></script>
+</body>
+</html>

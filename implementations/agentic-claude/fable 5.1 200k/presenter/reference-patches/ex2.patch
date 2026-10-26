@@ -1,0 +1,43 @@
+diff -ruN a/src/main/kotlin/dev/conferenceplanner/booking/Booking.kt b/src/main/kotlin/dev/conferenceplanner/booking/Booking.kt
+--- a/src/main/kotlin/dev/conferenceplanner/booking/Booking.kt	2026-09-29 14:45:27.393859690 +0200
++++ b/src/main/kotlin/dev/conferenceplanner/booking/Booking.kt	2026-09-29 14:14:53.937282291 +0200
+@@ -17,4 +17,4 @@
+ /** A previously completed request for the same attendee and request key. */
+ data class CompletedRequest(val sessionId: Long, val bookingId: Long)
+ 
+-data class SessionRow(val id: Long, val title: String, val capacity: Int)
++data class LockedSession(val id: Long, val title: String, val capacity: Int)
+diff -ruN a/src/main/kotlin/dev/conferenceplanner/booking/BookingService.kt b/src/main/kotlin/dev/conferenceplanner/booking/BookingService.kt
+--- a/src/main/kotlin/dev/conferenceplanner/booking/BookingService.kt	2026-09-29 14:45:27.393408401 +0200
++++ b/src/main/kotlin/dev/conferenceplanner/booking/BookingService.kt	2026-09-29 14:14:53.953446981 +0200
+@@ -35,7 +35,7 @@
+             return@execute BookingResult(repository.findBooking(completed.bookingId)!!, created = false)
+         }
+ 
+-        val session = repository.findSession(sessionId)
++        val session = repository.lockSession(sessionId)
+             ?: throw ApiException(ErrorCode.SESSION_NOT_FOUND, "Session $sessionId does not exist")
+         if (repository.hasActiveBooking(sessionId, attendeeId)) {
+             throw ApiException(ErrorCode.ALREADY_BOOKED, "Attendee already has an active booking for this session")
+diff -ruN a/src/main/kotlin/dev/conferenceplanner/booking/PostgresBookingRepository.kt b/src/main/kotlin/dev/conferenceplanner/booking/PostgresBookingRepository.kt
+--- a/src/main/kotlin/dev/conferenceplanner/booking/PostgresBookingRepository.kt	2026-09-29 14:45:27.393007070 +0200
++++ b/src/main/kotlin/dev/conferenceplanner/booking/PostgresBookingRepository.kt	2026-09-29 14:14:53.946179860 +0200
+@@ -41,10 +41,15 @@
+             .param("booking", bookingId).param("attendee", attendeeId).param("key", requestKey).update()
+     }
+ 
+-    fun findSession(sessionId: Long): SessionRow? =
+-        jdbc.sql("SELECT id, title, capacity FROM sessions WHERE id = :id")
++    /**
++     * Invariant 1 coordination: the session row is the lock. Every booking for a session takes it,
++     * so availability is counted and the booking inserted while no other booker can interleave.
++     * Works across any number of application processes because PostgreSQL holds the lock.
++     */
++    fun lockSession(sessionId: Long): LockedSession? =
++        jdbc.sql("SELECT id, title, capacity FROM sessions WHERE id = :id FOR UPDATE")
+             .param("id", sessionId)
+-            .query { rs, _ -> SessionRow(rs.getLong("id"), rs.getString("title"), rs.getInt("capacity")) }
++            .query { rs, _ -> LockedSession(rs.getLong("id"), rs.getString("title"), rs.getInt("capacity")) }
+             .optional().orElse(null)
+ 
+     fun countActive(sessionId: Long): Int =

@@ -1,0 +1,11 @@
+.DS_Store
+.idea/
+.gradle/
+.kotlin/
+build/
+exports/
+verification-output/
+node_modules/
+__pycache__/
+*.pyc
+*evidence*
